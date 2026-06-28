@@ -1,0 +1,64 @@
+[package]
+name = "caldav-server"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "calendarkit"
+path = "src/lib/lib.rs"
+
+[[bin]]
+name = "calenderd"
+path = "src/main/main.rs"
+
+[[bin]]
+name = "calenderctl"
+path = "src/ctl/main.rs"
+
+[[test]]
+name = "integration_test"
+path = "src/test/integration_test.rs"
+
+[dependencies]
+# HTTP server
+axum = { version = "0.8", features = ["macros"] }
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["auth", "trace"] }
+clap = { version = "4", features = ["derive"] }
+
+# TLS
+axum-server = { version = "0.8.0", features = ["tls-rustls"] }
+
+# Database
+sqlx = { version = "0.9.0", features = ["sqlite", "runtime-tokio", "macros", "migrate", "time"] }
+
+# iCalendar parsing
+icalendar = "0.16"
+
+# XML (for WebDAV/CalDAV responses)
+quick-xml = { version = "0.37", features = ["serialize"] }
+
+# Serialisation
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Logging/tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Misc
+uuid = { version = "1", features = ["v4"] }
+time = { version = "0.3", features = ["formatting", "parsing"] }
+base64 = "0.22"
+async-trait = "0.1.89"
+bcrypt = "0.16"
+rcgen = { version = "0.13", features = ["pem", "x509-parser"] }
+
+[dev-dependencies]
+axum-test = "17"
+tokio = { version = "1", features = ["full"] }
