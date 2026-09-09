@@ -1,8 +1,8 @@
-# caldav-server
+# Calendar Daemon
 
 A CalDAV server targeting Apple Calendar (macOS / iOS), built on Tokio + axum.
 
-## Structiure
+## Structure
 This project utilises cargo workspaces, to build multiple application binaries.
 
 ```
