@@ -2,40 +2,15 @@
 
 A CalDAV server targeting Apple Calendar (macOS / iOS), built on Tokio + axum.
 
-## Architecture
+## Structiure
+This project utilises cargo workspaces, to build multiple application binaries.
 
 ```
 src/
-├── domain/          # Pure data types — Calendar, CalendarObject, Principal
-├── store/
-│   ├── calendar_store.rs   # CalendarStore trait (the DI contract)
-│   ├── sqlite.rs           # SQLite backend (production)
-│   └── memory.rs           # In-memory backend (tests)
-├── caldav/
-│   ├── discovery.rs        # .well-known, principal, home-set PROPFIND
-│   ├── calendar.rs         # Calendar collection handlers
-│   ├── object.rs           # .ics GET / PUT / DELETE / REPORT
-│   ├── propfind.rs         # General PROPFIND dispatcher
-│   └── xml.rs              # WebDAV XML response builders
-├── auth.rs          # Basic auth middleware
-├── router.rs        # Route table + method dispatch
-├── app_state.rs     # AppState — DI root
-├── config.rs        # Environment-based config
-└── error.rs         # StoreError + AppError
-```
-
-### Dependency injection
-
-The `CalendarStore` trait is the seam between handlers and persistence.
-`AppState` holds an `Arc<dyn CalendarStore>` so any implementation can
-be swapped in — SQLite for production, `InMemoryStore` for tests.
-
-```rust
-// Production
-let store = Arc::new(SqliteStore::new(pool).await?);
-
-// Tests
-let store = Arc::new(InMemoryStore::default());
+├── ctl         # System control, configuration, and helper cli tool 
+├── lib         # Shared models and code for each
+├── main        # Calendard server implemention
+└── test        # Integration tests
 ```
 
 ## Setup
@@ -47,7 +22,7 @@ export BASE_URL="http://127.0.0.1:3000"
 export DATABASE_URL="./database.sqlite"
 export CALDAV_USERNAME="alice"
 export CALDAV_DISPLAY_NAME="Alice"
-# Generate with: cargo run -- passwd yourpassword
+# Generate with: cargo run -- passwd <your password>
 export CALDAV_PASSWORD_HASH='$2b$12$...'
 export BIND_ADDR="127.0.0.1:3000"
 ```
@@ -88,22 +63,31 @@ iOS: **Settings → Calendar → Accounts → Add Account → Other → Add CalD
 
 ## What's implemented
 
+### Mandatory
 - [x] Apple discovery chain (`.well-known` → principal → home-set)
 - [x] `/.well-known/caldav` and `/.well-known/calendar` redirects
-- [x] `PROPFIND` on root, principal, home-set, calendar, object
-- [x] `OPTIONS` with WebDAV/CalDAV capability headers
-- [x] `GET` / `PUT` / `DELETE` for `.ics` objects
-- [x] ETags + conditional requests (`If-Match`, `If-None-Match`)
-- [x] `REPORT` stub (returns all objects — full calendar-query parsing TODO)
-- [x] `MKCALENDAR` for creating calendars from clients
-- [x] Basic auth middleware with bcrypt password verification
-- [x] SQLite store with migrations
-- [x] In-memory store for tests
-- [x] Integration test suite
+- [ ] `PROPFIND` on root, principal, home-set, calendar, object
+- [ ] `OPTIONS` with WebDAV/CalDAV capability headers
+- [ ] `GET` / `PUT` / `DELETE` for `.ics` objects
+- [ ] ETags + conditional requests (`If-Match`, `If-None-Match`)
+- [ ] `REPORT` stub (returns all objects — full calendar-query parsing TODO)
+- [ ] `MKCALENDAR` for creating calendars from clients
+- [ ] Basic auth middleware with bcrypt password verification
+- [ ] SQLite store with migrations
 
-## What's next
-
+### Future ideas 
+- [ ] In-memory store for tests
+- [ ] Integration test suite
 - [ ] Full `REPORT` XML parsing (calendar-query date filters, calendar-multiget)
 - [ ] WebDAV sync-collection (RFC 6578) — efficient delta sync
 - [ ] TLS via `axum-server` + rustls
 - [ ] Kubernetes deployment manifests
+
+## Disclaimers
+This project heavily utilised code generative AI to create a 'functional' version
+I'm in the process of refactoring it, as it's implementation was barely 'passable'
+
+This includes:
+- Restructuring data to be database first rather than bulk CalDAV file formats.
+- Implementing, compliant CalDAV protocols for accounts and authentication.
+- Redesiging domain models, to be correct and eliminate as many invalid states as possible
