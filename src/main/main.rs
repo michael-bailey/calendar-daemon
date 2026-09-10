@@ -5,6 +5,8 @@ pub mod cli;
 pub mod database;
 pub mod config;
 pub mod repositories;
+pub mod discovery;
+pub mod application;
 
 use std::{str::FromStr, sync::Arc};
 use std::net::SocketAddr;
@@ -32,6 +34,7 @@ use crate::{
         sqlite::SqliteStore,
     }
 };
+use crate::application::Application;
 use crate::database::setup_database;
 use crate::repositories::calendar_repository::CalendarRepository;
 use crate::repositories::CalendarStore;
@@ -45,19 +48,7 @@ async fn main() -> anyhow::Result<()> {
         .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "calendard=info".into()))
         .with(tracing_subscriber::fmt::layer())
         .init();
-
-    match Cli::parse().command {
-        None => run_server().await,
-        Some(Command::Passwd { password }) => {
-            println!("{}", bcrypt::hash(password, bcrypt::DEFAULT_COST)?);
-            Ok(())
-        }
-    }
-}
-
-async fn run_server() -> anyhow::Result<()> {
-    info!("Starting server");
-
+    
     info!("loading config");
     let config = Config::from_env_cli()?;
 
@@ -81,30 +72,18 @@ async fn run_server() -> anyhow::Result<()> {
         &config.password_hash,
     );
 
-
     info!("creating app state");
     let state = AppState::new(
         calendar_repo.clone(), calendar_repo, object_repo, principal, &config.get_base_url());
-
-    state.store.upsert_calendar(Calendar::new("cal", "Main Calendar")).await?;
-
-    info!("creating router");
-    let app: Router = router::build_router(state)
-        .layer(TraceLayer::new_for_http());
-
-    info!("CalDAV server listening on {}", config.get_bind_address());
-    info!("Base URL: {}", config.get_base_url());
 
     let tls_config = RustlsConfig::from_pem_file(
         &config.tls_cert_path,   // path to your cert.pem
         &config.tls_key_path,    // path to your cert-key.pem
     ).await?;
 
-    let address: SocketAddr = config.get_bind_address().parse()?;
+    let app = Application::new(state);
 
-    let server = axum_server::bind_rustls(address, tls_config);
-    server.serve(app.into_make_service()).await?;
-    Ok(())
+    app.run_tls(tls_config).await
 }
 
 async fn ensure_default_calendar(store: &Arc<SqliteStore>) -> anyhow::Result<()> {
