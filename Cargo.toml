@@ -8,7 +8,7 @@ name = "calendarkit"
 path = "src/lib/lib.rs"
 
 [[bin]]
-name = "calenderd"
+name = "calendard"
 path = "src/main/main.rs"
 
 [[bin]]
